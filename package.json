@@ -1,0 +1,42 @@
+{
+  "name": "google-sheets-mcp",
+  "version": "1.0.0",
+  "description": "Model Context Protocol server for Google Sheets integration",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "inspector": "node src/inspector.js",
+    "inspector:direct": "npx @modelcontextprotocol/inspector src/index.js",
+    "oauth:setup": "node src/oauth-setup.js",
+    "oauth:test": "node src/oauth-setup.js test",
+    "test:setup": "node test-setup.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "google-sheets",
+    "ai",
+    "automation"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@googleapis/sheets": "^7.0.0",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "google-auth-library": "^9.0.0",
+    "googleapis": "^154.0.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/inspector": "latest"
+  },
+  "optionalDependencies": {
+    "@modelcontextprotocol/inspector": "latest"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

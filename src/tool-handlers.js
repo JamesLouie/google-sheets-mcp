@@ -151,7 +151,7 @@ async function handleCreateSheet(client, args) {
 // Data Operation Handlers
 
 async function handleGetSheetData(client, args) {
-  const { spreadsheet_id, sheet_name, range } = args;
+  const { spreadsheet_id, sheet_name = "Sheet1", range } = args;
   const data = await client.getSheetData(spreadsheet_id, sheet_name, range);
   
   return {
@@ -165,7 +165,7 @@ async function handleGetSheetData(client, args) {
 }
 
 async function handleUpdateCells(client, args) {
-  const { spreadsheet_id, sheet_name, range, values } = args;
+  const { spreadsheet_id, sheet_name = "Sheet1", range, values } = args;
   
   // Validate input
   if (!Array.isArray(values) || values.length === 0) {
@@ -182,7 +182,7 @@ async function handleUpdateCells(client, args) {
 }
 
 async function handleAppendRows(client, args) {
-  const { spreadsheet_id, sheet_name, values } = args;
+  const { spreadsheet_id, sheet_name = "Sheet1", values } = args;
   
   // Validate input
   if (!Array.isArray(values) || values.length === 0) {
@@ -246,7 +246,7 @@ async function handleShareSpreadsheet(client, args) {
 // Utility Handlers
 
 async function handleClearRange(client, args) {
-  const { spreadsheet_id, sheet_name, range } = args;
+  const { spreadsheet_id, sheet_name = "Sheet1", range } = args;
   
   // Clear range by updating with empty values
   // First, we need to determine the size of the range to clear
@@ -277,7 +277,7 @@ async function handleClearRange(client, args) {
 async function handleFindAndReplace(client, args) {
   const { 
     spreadsheet_id, 
-    sheet_name, 
+    sheet_name = "Sheet1", 
     find, 
     replace, 
     range,

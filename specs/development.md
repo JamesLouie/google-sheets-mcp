@@ -49,6 +49,8 @@ cp config.example.env .env
 nano .env
 ```
 
+**Note**: The application uses `dotenv` to automatically load environment variables from the `.env` file at startup. Both the main server (`src/index.js`) and the inspector (`src/inspector.js`) load environment variables automatically. No additional configuration is required.
+
 #### 4. Authentication Setup
 ```bash
 # For OAuth 2.0 development
@@ -64,6 +66,51 @@ npm run test:setup
 ```
 
 ## 📝 Coding Standards
+
+### Environment Variable Management
+
+The application uses `dotenv` for environment variable management. Environment variables are loaded automatically from the `.env` file at application startup.
+
+### Tool Parameter Defaults
+
+The application provides sensible defaults for common parameters to improve usability:
+
+#### Sheet Name Defaults
+All data operation tools now default to "Sheet1" if no sheet name is provided:
+- `get_sheet_data`: Defaults to "Sheet1" if `sheet_name` is not specified
+- `update_cells`: Defaults to "Sheet1" if `sheet_name` is not specified  
+- `append_rows`: Defaults to "Sheet1" if `sheet_name` is not specified
+- `clear_range`: Defaults to "Sheet1" if `sheet_name` is not specified
+- `find_and_replace`: Defaults to "Sheet1" if `sheet_name` is not specified
+
+This allows for simplified API calls:
+```json
+{
+  "name": "get_sheet_data",
+  "arguments": {
+    "spreadsheet_id": "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
+  }
+}
+```
+
+#### Environment File Structure
+```bash
+# .env file structure
+SERVICE_ACCOUNT_PATH="/path/to/service-account.json"
+CREDENTIALS_CONFIG="base64_encoded_credentials"
+GOOGLE_APPLICATION_CREDENTIALS="/path/to/credentials.json"
+CREDENTIALS_PATH="/path/to/oauth-credentials.json"
+TOKEN_PATH="/path/to/token.json"
+DRIVE_FOLDER_ID="optional_folder_id"
+LOG_LEVEL="info"
+```
+
+#### Environment Variable Best Practices
+- **Security**: Never commit `.env` files to version control
+- **Documentation**: Keep `config.example.env` updated with all available variables
+- **Validation**: Validate required environment variables at startup
+- **Defaults**: Provide sensible defaults where appropriate
+- **Consistency**: Both main server and inspector load from the same `.env` file
 
 ### JavaScript/Node.js Standards
 
@@ -252,6 +299,24 @@ describe('MCP Server E2E', () => {
 });
 ```
 
+#### 4. OAuth Connection Testing
+The project includes a comprehensive OAuth connection test that verifies the Google Sheets API integration:
+
+```bash
+# Run OAuth connection test
+npm run test:oauth-connection
+```
+
+This test performs the following operations:
+- Validates environment variables and OAuth credentials
+- Initializes the GoogleSheetsClient with OAuth authentication
+- Lists accessible spreadsheets
+- Creates a test spreadsheet
+- Performs read/write operations on sheets
+- Verifies all API endpoints are working correctly
+
+The test provides detailed output and helpful error messages for troubleshooting authentication issues.
+
 ### Test Commands
 ```bash
 # Run all tests
@@ -268,6 +333,12 @@ npm run test:coverage
 
 # Run specific test file
 npm test -- test/tool-handlers.test.js
+
+# Test OAuth connection
+npm run test:oauth-connection
+
+# Test service account connection
+npm run test:service-account
 ```
 
 ## 🔧 Development Workflow
@@ -386,6 +457,30 @@ test('prevents regression', () => {
   // Test that ensures bug doesn't return
 });
 ```
+
+### Known Issues and Fixes
+
+#### OAuth2 Authentication Client Issue
+**Problem**: When using OAuth2 authentication, the `GoogleSheetsClient.initialize()` method fails with `TypeError: this.auth.getClient is not a function`.
+
+**Root Cause**: The authentication setup returns different types of auth objects:
+- Service Account/ADC: Returns `GoogleAuth` instance with `getClient()` method
+- OAuth2: Returns `OAuth2Client` instance without `getClient()` method
+
+**Fix**: Updated the initialization logic to handle both auth types:
+
+```javascript
+// Handle different auth types
+if (this.auth.getClient) {
+  // GoogleAuth instance (Service Account, ADC)
+  this.authClient = await this.auth.getClient();
+} else {
+  // OAuth2Client instance (OAuth2)
+  this.authClient = this.auth;
+}
+```
+
+**Verification**: Run `npm run test:oauth-connection` to confirm the fix works.
 
 ## 🚀 Deployment
 

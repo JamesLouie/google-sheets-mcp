@@ -1,0 +1,26 @@
+{
+  "name": "google-sheets-mcp",
+  "command": "node",
+  "args": ["src/index.js"],
+  "env": {
+    "CREDENTIALS_PATH": "./google-oauth-key.json",
+    "TOKEN_PATH": "./token.json",
+    "NODE_ENV": "production"
+  },
+  "cwd": "/Users/louie/Projects/mcp/google-sheets-mcp",
+  "description": "Google Sheets MCP Server with OAuth authentication",
+  "setup_instructions": [
+    "1. Ensure you have the following files in the project directory:",
+    "   - google-oauth-key.json (OAuth credentials)",
+    "   - token.json (OAuth tokens)",
+    "2. Make sure token.json has proper permissions (600)",
+    "3. The server will automatically handle OAuth authentication",
+    "4. If authentication fails, run: npm run oauth:setup"
+  ],
+  "troubleshooting": {
+    "file_not_found": "Check that token.json and google-oauth-key.json exist in the project directory",
+    "permission_denied": "Run: chmod 600 token.json",
+    "oauth_expired": "Run: npm run oauth:setup to refresh tokens",
+    "working_directory": "Ensure the MCP server runs from the project root directory"
+  }
+} 

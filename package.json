@@ -8,11 +8,7 @@
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
     "inspector": "node src/inspector.js",
-    "inspector:direct": "npx @modelcontextprotocol/inspector src/index.js",
-    "oauth:setup": "node src/oauth-setup.js",
-    "oauth:test": "node src/oauth-setup.js test",
-    "test:setup": "node test-setup.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "oauth:setup": "node src/oauth-setup.js"
   },
   "keywords": [
     "mcp",
@@ -26,6 +22,7 @@
   "dependencies": {
     "@googleapis/sheets": "^7.0.0",
     "@modelcontextprotocol/sdk": "^1.0.0",
+    "dotenv": "^17.2.1",
     "google-auth-library": "^9.0.0",
     "googleapis": "^154.0.0",
     "zod": "^3.22.0"

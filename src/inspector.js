@@ -2,6 +2,10 @@
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import dotenv from 'dotenv';
+
+// Load environment variables from .env file
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -20,22 +24,23 @@ function checkAuthentication() {
 
   if (!hasServiceAccount && !hasCredentialsConfig && !hasGoogleCreds && !hasOAuth) {
     console.error('⚠️  No authentication configured!');
-    console.error('Please set up one of the following before running the inspector:');
+    console.error('Please set up one of the following in your .env file:');
     console.error('');
     console.error('1. Service Account:');
-    console.error('   export SERVICE_ACCOUNT_PATH="/path/to/service-account.json"');
+    console.error('   SERVICE_ACCOUNT_PATH="/path/to/service-account.json"');
     console.error('');
     console.error('2. Application Default Credentials:');
-    console.error('   export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account.json"');
+    console.error('   GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account.json"');
     console.error('   # OR run: gcloud auth application-default login');
     console.error('');
     console.error('3. OAuth 2.0:');
-    console.error('   export CREDENTIALS_PATH="/path/to/credentials.json"');
-    console.error('   export TOKEN_PATH="/path/to/token.json"');
+    console.error('   CREDENTIALS_PATH="/path/to/credentials.json"');
+    console.error('   TOKEN_PATH="/path/to/token.json"');
     console.error('');
     console.error('4. Base64 Credentials:');
-    console.error('   export CREDENTIALS_CONFIG="base64_encoded_credentials"');
+    console.error('   CREDENTIALS_CONFIG="base64_encoded_credentials"');
     console.error('');
+    console.error('Copy config.example.env to .env and configure your authentication method.');
     console.error('See README.md for detailed setup instructions.');
     process.exit(1);
   }

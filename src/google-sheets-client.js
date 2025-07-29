@@ -20,9 +20,18 @@ export class GoogleSheetsClient {
     try {
       this.auth = await this.setupAuthentication();
       
+      // Handle different auth types
+      if (this.auth.getClient) {
+        // GoogleAuth instance (Service Account, ADC)
+        this.authClient = await this.auth.getClient();
+      } else {
+        // OAuth2Client instance (OAuth2)
+        this.authClient = this.auth;
+      }
+      
       // Initialize Google Sheets and Drive APIs
-      this.sheets = google.sheets({ version: 'v4', auth: this.auth });
-      this.drive = google.drive({ version: 'v3', auth: this.auth });
+      this.sheets = google.sheets({ version: 'v4', auth: this.authClient });
+      this.drive = google.drive({ version: 'v3', auth: this.authClient });
       
       console.error('Google Sheets client initialized successfully');
     } catch (error) {
@@ -32,7 +41,7 @@ export class GoogleSheetsClient {
   }
 
   /**
-   * Set up authentication using multiple methods in order of preference
+   * Set up OAuth 2.0 authentication
    */
   async setupAuthentication() {
     const scopes = [
@@ -40,78 +49,94 @@ export class GoogleSheetsClient {
       'https://www.googleapis.com/auth/drive.file',
     ];
 
-    // Method 1: Service Account from environment variable (recommended for production)
-    if (process.env.SERVICE_ACCOUNT_PATH) {
-      try {
-        const auth = new GoogleAuth({
-          keyFile: process.env.SERVICE_ACCOUNT_PATH,
-          scopes,
-        });
-        console.error('Using Service Account authentication from file');
-        return auth;
-      } catch (error) {
-        console.error('Service Account authentication failed:', error.message);
-      }
-    }
-
-    // Method 2: Service Account from base64 encoded credentials
-    if (process.env.CREDENTIALS_CONFIG) {
-      try {
-        const credentials = JSON.parse(
-          Buffer.from(process.env.CREDENTIALS_CONFIG, 'base64').toString()
-        );
-        const auth = new GoogleAuth({
-          credentials,
-          scopes,
-        });
-        console.error('Using Service Account authentication from base64 config');
-        return auth;
-      } catch (error) {
-        console.error('Base64 credentials authentication failed:', error.message);
-      }
-    }
-
-    // Method 3: Application Default Credentials
-    if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-      try {
-        const auth = new GoogleAuth({ scopes });
-        console.error('Using Application Default Credentials');
-        return auth;
-      } catch (error) {
-        console.error('Application Default Credentials authentication failed:', error.message);
-      }
-    }
-
-    // Method 4: OAuth2 credentials for interactive use
+    // OAuth2 credentials for interactive use
     if (process.env.CREDENTIALS_PATH && process.env.TOKEN_PATH) {
       try {
-        const credentials = JSON.parse(await fs.readFile(process.env.CREDENTIALS_PATH, 'utf8'));
+        // Try multiple paths for credentials and token files
+        const credentialsPaths = [
+          process.env.CREDENTIALS_PATH,
+          path.resolve(process.env.CREDENTIALS_PATH),
+          path.join(process.cwd(), process.env.CREDENTIALS_PATH),
+          './google-oauth-key.json',
+          './credentials.json'
+        ];
+        
+        const tokenPaths = [
+          process.env.TOKEN_PATH,
+          path.resolve(process.env.TOKEN_PATH),
+          path.join(process.cwd(), process.env.TOKEN_PATH),
+          './token.json'
+        ];
+        
+        let credentials = null;
+        let credentialsPath = null;
+        
+        // Try to read credentials file
+        for (const credPath of credentialsPaths) {
+          try {
+            credentials = JSON.parse(await fs.readFile(credPath, 'utf8'));
+            credentialsPath = credPath;
+            console.error('Found credentials at:', credPath);
+            break;
+          } catch (error) {
+            console.error('Failed to read credentials from:', credPath, error.message);
+          }
+        }
+        
+        if (!credentials) {
+          throw new Error('Could not find or read credentials file from any of the attempted paths');
+        }
+        
         const oauth2Client = new google.auth.OAuth2(
           credentials.web.client_id,
           credentials.web.client_secret,
           credentials.web.redirect_uris[0]
         );
 
-        try {
-          const token = JSON.parse(await fs.readFile(process.env.TOKEN_PATH, 'utf8'));
-          oauth2Client.setCredentials(token);
-          console.error('Using OAuth2 authentication with stored token');
-          return oauth2Client;
-        } catch (tokenError) {
-          console.error('No valid token found. OAuth2 setup requires interactive login.');
-          throw new Error('OAuth2 token not found. Please run authentication setup first.');
+        // Try to read token file
+        let token = null;
+        let tokenPath = null;
+        
+        for (const tokPath of tokenPaths) {
+          try {
+            console.error('Attempting to read token from:', tokPath);
+            token = JSON.parse(await fs.readFile(tokPath, 'utf8'));
+            tokenPath = tokPath;
+            console.error('Successfully read token from:', tokPath);
+            break;
+          } catch (error) {
+            console.error('Failed to read token from:', tokPath, error.message);
+          }
         }
+        
+        if (!token) {
+          throw new Error('Could not find or read token file from any of the attempted paths');
+        }
+        
+        // Check if token is expired (with 5 minute buffer)
+        if (token.expiry_date && token.expiry_date < Date.now() + 300000) {
+          console.error('OAuth token is expired or will expire soon');
+          throw new Error('OAuth token expired');
+        }
+        
+        oauth2Client.setCredentials(token);
+        console.error('Using OAuth2 authentication with stored token');
+        return oauth2Client;
       } catch (error) {
         console.error('OAuth2 authentication failed:', error.message);
+        console.error('Token read error:', error.message);
+        console.error('Token path attempted:', process.env.TOKEN_PATH);
+        console.error('Current working directory:', process.cwd());
+        console.error('No valid token found or token expired. OAuth2 setup requires interactive login.');
+        throw new Error('OAuth2 token not found or expired. Please run authentication setup first.');
       }
     }
 
     throw new Error(
-      'No valid authentication method found. Please set up one of the following:\n' +
-      '1. SERVICE_ACCOUNT_PATH environment variable\n' +
-      '2. CREDENTIALS_CONFIG environment variable (base64 encoded)\n' +
-      '3. GOOGLE_APPLICATION_CREDENTIALS environment variable\n' +
-      '4. CREDENTIALS_PATH and TOKEN_PATH for OAuth2'
+      'OAuth 2.0 authentication is required. Please set up the following:\n' +
+      '1. CREDENTIALS_PATH environment variable (path to OAuth credentials JSON)\n' +
+      '2. TOKEN_PATH environment variable (path to store OAuth tokens)\n' +
+      '3. Run "npm run oauth:setup" to complete the OAuth flow'
     );
   }
 
@@ -185,7 +210,7 @@ export class GoogleSheetsClient {
   /**
    * Get data from a sheet range
    */
-  async getSheetData(spreadsheetId, sheetName, range = null) {
+  async getSheetData(spreadsheetId, sheetName = "Sheet1", range = null) {
     try {
       const fullRange = range ? `${sheetName}!${range}` : sheetName;
       
@@ -210,7 +235,7 @@ export class GoogleSheetsClient {
   /**
    * Update cells in a sheet
    */
-  async updateCells(spreadsheetId, sheetName, range, values) {
+  async updateCells(spreadsheetId, sheetName = "Sheet1", range, values) {
     try {
       const fullRange = `${sheetName}!${range}`;
       
@@ -238,7 +263,7 @@ export class GoogleSheetsClient {
   /**
    * Append rows to a sheet
    */
-  async appendRows(spreadsheetId, sheetName, values) {
+  async appendRows(spreadsheetId, sheetName = "Sheet1", values) {
     try {
       const response = await this.sheets.spreadsheets.values.append({
         spreadsheetId,
@@ -252,6 +277,8 @@ export class GoogleSheetsClient {
 
       return {
         updatedCells: response.data.updates.updatedCells,
+        updatedColumns: response.data.updatedColumns,
+        updatedRows: response.data.updatedRows,
         updatedRange: response.data.updates.updatedRange,
         tableRange: response.data.tableRange,
       };

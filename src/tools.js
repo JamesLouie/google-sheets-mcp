@@ -87,7 +87,7 @@ export const toolDefinitions = [
   // Data Operations
   {
     name: "get_sheet_data",
-    description: "Read data from a specified range in a sheet. If no range is provided, reads the entire sheet.",
+    description: "Read data from a specified range in a sheet. If no range is provided, reads the entire sheet. If no sheet_name is provided, defaults to 'Sheet1'.",
     inputSchema: {
       type: "object",
       properties: {
@@ -97,19 +97,20 @@ export const toolDefinitions = [
         },
         sheet_name: {
           type: "string",
-          description: "The name of the sheet to read from.",
+          description: "The name of the sheet to read from. Defaults to 'Sheet1' if not provided.",
+          default: "Sheet1",
         },
         range: {
           type: "string",
           description: "Optional A1 notation range (e.g., 'A1:C10', 'B2:D'). If not provided, reads the entire sheet.",
         },
       },
-      required: ["spreadsheet_id", "sheet_name"],
+      required: ["spreadsheet_id"],
     },
   },
   {
     name: "update_cells",
-    description: "Update cells in a specific range with new values. Overwrites existing data in the range.",
+    description: "Update cells in a specific range with new values. Overwrites existing data in the range. If no sheet_name is provided, defaults to 'Sheet1'.",
     inputSchema: {
       type: "object",
       properties: {
@@ -119,7 +120,8 @@ export const toolDefinitions = [
         },
         sheet_name: {
           type: "string",
-          description: "The name of the sheet to update.",
+          description: "The name of the sheet to update. Defaults to 'Sheet1' if not provided.",
+          default: "Sheet1",
         },
         range: {
           type: "string",
@@ -136,12 +138,12 @@ export const toolDefinitions = [
           },
         },
       },
-      required: ["spreadsheet_id", "sheet_name", "range", "values"],
+      required: ["spreadsheet_id", "range", "values"],
     },
   },
   {
     name: "append_rows",
-    description: "Append new rows to the end of a sheet (after the last row with data).",
+    description: "Append new rows to the end of a sheet (after the last row with data). If no sheet_name is provided, defaults to 'Sheet1'.",
     inputSchema: {
       type: "object",
       properties: {
@@ -151,7 +153,8 @@ export const toolDefinitions = [
         },
         sheet_name: {
           type: "string",
-          description: "The name of the sheet to append to.",
+          description: "The name of the sheet to append to. Defaults to 'Sheet1' if not provided.",
+          default: "Sheet1",
         },
         values: {
           type: "array",
@@ -164,7 +167,7 @@ export const toolDefinitions = [
           },
         },
       },
-      required: ["spreadsheet_id", "sheet_name", "values"],
+      required: ["spreadsheet_id", "values"],
     },
   },
   {
@@ -254,7 +257,7 @@ export const toolDefinitions = [
   // Utility
   {
     name: "clear_range",
-    description: "Clear all values in a specified range while preserving formatting.",
+    description: "Clear all values in a specified range while preserving formatting. If no sheet_name is provided, defaults to 'Sheet1'.",
     inputSchema: {
       type: "object",
       properties: {
@@ -264,19 +267,20 @@ export const toolDefinitions = [
         },
         sheet_name: {
           type: "string",
-          description: "The name of the sheet.",
+          description: "The name of the sheet. Defaults to 'Sheet1' if not provided.",
+          default: "Sheet1",
         },
         range: {
           type: "string",
           description: "A1 notation range to clear (e.g., 'A1:C10').",
         },
       },
-      required: ["spreadsheet_id", "sheet_name", "range"],
+      required: ["spreadsheet_id", "range"],
     },
   },
   {
     name: "find_and_replace",
-    description: "Find and replace text values within a sheet or specific range.",
+    description: "Find and replace text values within a sheet or specific range. If no sheet_name is provided, defaults to 'Sheet1'.",
     inputSchema: {
       type: "object",
       properties: {
@@ -286,7 +290,8 @@ export const toolDefinitions = [
         },
         sheet_name: {
           type: "string",
-          description: "The name of the sheet to search in.",
+          description: "The name of the sheet to search in. Defaults to 'Sheet1' if not provided.",
+          default: "Sheet1",
         },
         find: {
           type: "string",
@@ -311,7 +316,7 @@ export const toolDefinitions = [
           default: false,
         },
       },
-      required: ["spreadsheet_id", "sheet_name", "find", "replace"],
+      required: ["spreadsheet_id", "find", "replace"],
     },
   },
 ]; 

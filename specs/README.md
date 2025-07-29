@@ -7,7 +7,7 @@ This folder contains comprehensive specification documents for the Google Sheets
 ### Core Architecture
 - **[Architecture Overview](architecture.md)** - High-level system design and component relationships
 - **[API Specification](api-specification.md)** - Detailed API endpoints, request/response formats, and data models
-- **[Authentication Specification](authentication.md)** - Authentication methods, security requirements, and credential management
+- **[Authentication Specification](authentication.md)** - Authentication methods, security requirements, credential management, and OAuth startup functionality
 
 ### Implementation Details
 - **[Tool Specifications](tool-specifications.md)** - Complete specification of all MCP tools and their behaviors

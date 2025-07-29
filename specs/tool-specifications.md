@@ -228,10 +228,15 @@ This document provides detailed specifications for all MCP tools implemented in 
       "description": "Google Sheets spreadsheet ID",
       "pattern": "^[a-zA-Z0-9-_]+$"
     },
+    "sheet_name": {
+      "type": "string",
+      "description": "The name of the sheet to read from. Defaults to 'Sheet1' if not provided.",
+      "default": "Sheet1"
+    },
     "range": {
       "type": "string",
-      "description": "A1 notation range (e.g., 'Sheet1!A1:D10')",
-      "pattern": "^[A-Za-z0-9_]+![A-Z]+[0-9]+:[A-Z]+[0-9]+$"
+      "description": "Optional A1 notation range (e.g., 'A1:C10', 'B2:D'). If not provided, reads the entire sheet.",
+      "pattern": "^[A-Z]+[0-9]+:[A-Z]+[0-9]+$"
     },
     "value_render_option": {
       "type": "string",
@@ -240,7 +245,7 @@ This document provides detailed specifications for all MCP tools implemented in 
       "description": "How values should be rendered"
     }
   },
-  "required": ["spreadsheet_id", "range"]
+  "required": ["spreadsheet_id"]
 }
 ```
 
@@ -286,8 +291,19 @@ This document provides detailed specifications for all MCP tools implemented in 
   "name": "get_sheet_data",
   "arguments": {
     "spreadsheet_id": "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms",
-    "range": "Sheet1!A1:D10",
+    "sheet_name": "Sheet1",
+    "range": "A1:D10",
     "value_render_option": "FORMATTED_VALUE"
+  }
+}
+```
+
+**Simplified Usage** (using defaults):
+```json
+{
+  "name": "get_sheet_data",
+  "arguments": {
+    "spreadsheet_id": "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
   }
 }
 ```

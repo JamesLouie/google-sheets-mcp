@@ -30,48 +30,10 @@ The Google Sheets MCP server supports multiple authentication methods to accommo
 
 ## 🔑 Authentication Methods
 
-### 1. Service Account Authentication
+### OAuth 2.0 Authentication
 
 #### Overview
-Service accounts are recommended for server-to-server applications and automated processes. They provide long-lived credentials with specific permissions.
-
-#### Configuration
-```bash
-# Environment variable
-export SERVICE_ACCOUNT_PATH="/path/to/service-account.json"
-
-# Or in .env file
-SERVICE_ACCOUNT_PATH=/path/to/service-account.json
-```
-
-#### Implementation
-```javascript
-const auth = new GoogleAuth({
-  keyFile: process.env.SERVICE_ACCOUNT_PATH,
-  scopes: [
-    'https://www.googleapis.com/auth/spreadsheets',
-    'https://www.googleapis.com/auth/drive.file',
-  ],
-});
-```
-
-#### Security Requirements
-- **File Permissions**: 600 (owner read/write only)
-- **Storage**: Secure file system location
-- **Rotation**: Regular credential rotation recommended
-- **Access Control**: Limited to application processes
-
-#### Setup Process
-1. Create service account in Google Cloud Console
-2. Assign appropriate roles (Sheets API, Drive API)
-3. Download JSON key file
-4. Set environment variable
-5. Verify permissions
-
-### 2. OAuth 2.0 Authentication
-
-#### Overview
-OAuth 2.0 is designed for interactive applications where user consent is required. It provides temporary access tokens with refresh capabilities.
+OAuth 2.0 is the primary authentication method for this application. It provides secure, user-controlled access to Google Sheets with temporary access tokens and refresh capabilities.
 
 #### Configuration
 ```bash
@@ -83,6 +45,8 @@ export TOKEN_PATH="/path/to/token.json"
 CREDENTIALS_PATH=/path/to/credentials.json
 TOKEN_PATH=/path/to/token.json
 ```
+
+**Note**: The application automatically loads environment variables from the `.env` file using `dotenv`. Simply add your configuration to the `.env` file and it will be loaded at startup.
 
 #### Implementation
 ```javascript
@@ -99,9 +63,10 @@ const oauth2Client = new google.auth.OAuth2(
 3. **Token Exchange**: Exchange code for tokens
 4. **Token Storage**: Secure token persistence
 5. **Token Refresh**: Automatic refresh handling
+6. **Startup Authentication**: Automatic OAuth initiation on application startup
 
 #### Security Requirements
-- **Redirect URI**: `http://localhost:3000/oauth2callback`
+- **Redirect URI**: `http://localhost:{port}/oauth2callback` (dynamically assigned, starting from port 3000)
 - **Token Storage**: Secure file storage (600 permissions)
 - **HTTPS**: Required for production redirect URIs
 - **Token Refresh**: Automatic refresh before expiration
@@ -110,71 +75,10 @@ const oauth2Client = new google.auth.OAuth2(
 1. Create OAuth 2.0 credentials in Google Cloud Console
 2. Configure redirect URIs
 3. Download credentials JSON
-4. Run `npm run oauth:setup`
+4. Run `npm run oauth:setup` (manual setup)
 5. Complete browser authorization
 6. Verify token storage
-
-### 3. Application Default Credentials (ADC)
-
-#### Overview
-ADC is designed for Google Cloud environments and local development with gcloud CLI. It automatically discovers credentials from the environment.
-
-#### Configuration
-```bash
-# Environment variable
-export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account.json"
-
-# Or use gcloud CLI
-gcloud auth application-default login
-```
-
-#### Implementation
-```javascript
-const auth = new GoogleAuth({ 
-  scopes: [
-    'https://www.googleapis.com/auth/spreadsheets',
-    'https://www.googleapis.com/auth/drive.file',
-  ] 
-});
-```
-
-#### Security Requirements
-- **gcloud CLI**: Authenticated user session
-- **Service Account**: Proper file permissions
-- **Environment**: Secure credential storage
-
-### 4. Base64 Encoded Credentials
-
-#### Overview
-Base64 encoding is useful for containerized environments where file mounting is not preferred or possible.
-
-#### Configuration
-```bash
-# Environment variable
-export CREDENTIALS_CONFIG="base64_encoded_credentials_string"
-
-# Or in .env file
-CREDENTIALS_CONFIG=base64_encoded_credentials_string
-```
-
-#### Implementation
-```javascript
-const credentials = JSON.parse(
-  Buffer.from(process.env.CREDENTIALS_CONFIG, 'base64').toString()
-);
-const auth = new GoogleAuth({
-  credentials,
-  scopes: [
-    'https://www.googleapis.com/auth/spreadsheets',
-    'https://www.googleapis.com/auth/drive.file',
-  ],
-});
-```
-
-#### Security Requirements
-- **Encoding**: Valid base64 encoding
-- **Content**: Valid JSON service account credentials
-- **Environment**: Secure environment variable storage
+7. **Automatic Startup**: OAuth will be initiated automatically on application startup if needed
 
 ## 🔒 Security Specifications
 
@@ -295,17 +199,6 @@ if (token.expiry_date && Date.now() >= token.expiry_date - 60000) {
 
 ## 📋 Setup Checklists
 
-### Service Account Setup
-- [ ] Create Google Cloud project
-- [ ] Enable Google Sheets API
-- [ ] Enable Google Drive API
-- [ ] Create service account
-- [ ] Assign appropriate roles
-- [ ] Download JSON key file
-- [ ] Set file permissions (600)
-- [ ] Configure environment variable
-- [ ] Test authentication
-
 ### OAuth 2.0 Setup
 - [ ] Create Google Cloud project
 - [ ] Enable Google Sheets API
@@ -318,13 +211,18 @@ if (token.expiry_date && Date.now() >= token.expiry_date - 60000) {
 - [ ] Verify token storage
 - [ ] Test connection
 
-### ADC Setup
-- [ ] Install gcloud CLI
-- [ ] Run `gcloud auth application-default login`
-- [ ] Verify authentication
-- [ ] Test API access
-
 ## 🔧 Troubleshooting
+
+### Claude Desktop Configuration
+
+When using this MCP server with Claude Desktop, ensure the following:
+
+1. **Working Directory**: The MCP server must run from the project root directory
+2. **File Paths**: Use relative paths in environment variables (e.g., `./token.json`)
+3. **File Permissions**: Ensure token files have proper permissions (`chmod 600 token.json`)
+4. **Configuration**: Use the provided `claude-desktop-config.json` as a reference
+
+The server now includes fallback path resolution to handle different execution environments.
 
 ### Common Issues
 
@@ -348,7 +246,7 @@ if (token.expiry_date && Date.now() >= token.expiry_date - 60000) {
 
 #### "Invalid redirect URI"
 **Solution**: 
-- Check that `http://localhost:3000/oauth2callback` is added to your OAuth client
+- Check that `http://localhost:3000/oauth2callback` is added to your OAuth client (the app will automatically find an available port if 3000 is in use)
 - Make sure there are no extra spaces or characters
 
 #### "Access denied" or "Permission denied"
@@ -368,8 +266,16 @@ if (token.expiry_date && Date.now() >= token.expiry_date - 60000) {
 
 #### "Port 3000 is already in use"
 **Solution**:
-- Close any other applications using port 3000
-- Or modify the port in `src/oauth-setup.js` (line 20)
+- The application now automatically finds an available port starting from 3000
+- If you need to use a specific port range, you can modify the `findAvailablePort` function in `src/oauth-startup.js`
+
+#### "Token file not found" (Claude Desktop)
+**Solution**:
+- Ensure the MCP server runs from the project root directory
+- Use relative paths in environment variables: `./token.json` instead of absolute paths
+- Check file permissions: `chmod 600 token.json`
+- Run the debug script: `node debug-token-access.js`
+- The server now has fallback path resolution for different execution environments
 
 ### Debug Commands
 ```bash
@@ -401,6 +307,9 @@ const token = JSON.parse(fs.readFileSync('token.json'));
 console.log('✅ Token file is valid');
 console.log('Expires:', new Date(token.expiry_date).toLocaleString());
 "
+
+# Debug token access (Claude Desktop)
+node debug-token-access.js
 ```
 
 ## 📋 OAuth 2.0 Setup Guide
@@ -427,7 +336,7 @@ console.log('Expires:', new Date(token.expiry_date).toLocaleString());
 3. Choose **Web application**
 4. Fill in the details:
    - **Name**: `Google Sheets MCP Server`
-   - **Authorized redirect URIs**: `http://localhost:3000/oauth2callback`
+   - **Authorized redirect URIs**: `http://localhost:3000/oauth2callback` (the app will automatically find an available port if 3000 is in use)
 5. Click **Create**
 6. Download the JSON file and save it as `credentials.json` in your project root
 
@@ -489,7 +398,7 @@ npm run inspector
 ##### Configure the OAuth Client
 1. **Application type**: Web application
 2. **Name**: Google Sheets MCP Server
-3. **Authorized redirect URIs**: `http://localhost:3000/oauth2callback`
+3. **Authorized redirect URIs**: `http://localhost:3000/oauth2callback` (you can also add additional ports like `http://localhost:3001/oauth2callback`, `http://localhost:3002/oauth2callback` for flexibility)
 4. Click **Create**
 5. Download the JSON file
 
@@ -544,6 +453,86 @@ npm run oauth:setup
 
 The script will detect expired tokens and automatically refresh them.
 
+## 🚀 OAuth Startup Authentication
+
+### Automatic OAuth Initiation
+
+The application now supports automatic OAuth authentication on startup. When the application starts and OAuth is configured but no valid token exists, it will automatically:
+
+1. **Check OAuth Configuration**: Verify that `CREDENTIALS_PATH` and `TOKEN_PATH` are set
+2. **Validate Token Status**: Check if existing tokens are valid and not expired
+3. **Initiate OAuth Flow**: If needed, start the OAuth authorization process
+4. **Handle Browser Authorization**: Open browser for user consent
+5. **Save Tokens**: Store the obtained tokens securely
+6. **Continue Startup**: Proceed with MCP server initialization
+
+### Startup Flow
+
+```
+Application Startup
+        │
+        ▼
+Check OAuth Configuration
+        │
+        ▼
+Token Exists & Valid?
+        │
+    ┌───┴───┐
+    │  Yes  │  No
+    │       │
+    ▼       ▼
+Continue   Start OAuth Flow
+Startup    │
+           ▼
+    Open Browser
+           │
+           ▼
+    User Authorization
+           │
+           ▼
+    Save Tokens
+           │
+           ▼
+    Continue Startup
+```
+
+### Configuration
+
+To enable automatic OAuth startup:
+
+1. **Set Environment Variables**:
+   ```bash
+   export CREDENTIALS_PATH="/path/to/credentials.json"
+   export TOKEN_PATH="/path/to/token.json"
+   ```
+
+2. **Or in .env file**:
+   ```bash
+   CREDENTIALS_PATH=/path/to/credentials.json
+   TOKEN_PATH=/path/to/token.json
+   ```
+
+### Testing Startup OAuth
+
+You can test the OAuth startup functionality:
+
+```bash
+# Test OAuth startup independently
+npm run oauth:startup
+
+# Start the MCP server (will trigger OAuth if needed)
+npm start
+```
+
+### Error Handling
+
+The startup OAuth handler includes comprehensive error handling:
+
+- **Missing Credentials**: Graceful fallback to other auth methods
+- **Expired Tokens**: Automatic token refresh attempt
+- **Network Issues**: Clear error messages and retry guidance
+- **User Cancellation**: Proper cleanup and error reporting
+
 ## 🔒 Security Best Practices
 
 ### File Permissions
@@ -559,6 +548,8 @@ You can use environment variables instead of files:
 export CREDENTIALS_PATH="/secure/path/to/credentials.json"
 export TOKEN_PATH="/secure/path/to/token.json"
 ```
+
+**Environment Variable Validation**: The application validates required environment variables at startup and provides clear error messages if authentication is not properly configured.
 
 ### Production Considerations
 - Store credentials securely (not in version control)
@@ -590,4 +581,32 @@ After successful OAuth setup:
 1. **Test with Inspector**: `npm run inspector`
 2. **Try the Examples**: See [test-examples.md](test-examples.md)
 3. **Integrate with Claude**: Add to your Claude Desktop configuration
-4. **Build Applications**: Use the MCP server in your projects 
+4. **Build Applications**: Use the MCP server in your projects
+
+## 📋 Current Setup Summary
+
+### Google Cloud Project Configuration
+- **Project ID**: `YOUR_PROJECT_ID`
+- **Project Name**: Google Sheets MCP Server
+- **APIs Enabled**: 
+  - Google Sheets API
+  - Google Drive API
+  - IAM Credentials API
+
+### Authentication Methods Configured
+
+#### OAuth 2.0 Authentication - REQUIRED
+- **Status**: ✅ Configured and working
+- **Credentials Location**: `./credentials.json`
+- **Token Location**: `./token.json`
+- **Test Result**: ✅ Authentication successful
+
+### Environment Configuration
+The application is configured to use OAuth 2.0 authentication exclusively.
+
+### Usage Instructions
+1. **Setup**: Run `npm run oauth:setup` to configure OAuth authentication
+2. **Automatic Startup**: OAuth will be initiated automatically on application startup if needed
+3. **Testing**: Use `npm run oauth:test` to verify your OAuth setup
+
+**Note**: Replace all placeholder values with your own values when setting up this application. 

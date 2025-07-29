@@ -14,10 +14,7 @@ A Model Context Protocol (MCP) server that provides seamless integration with Go
 - **Interactive Testing**: Built-in MCP Inspector for debugging and testing
 
 ### Authentication Methods
-- Service Account (recommended for production)
-- OAuth 2.0 (for interactive use)
-- Application Default Credentials (for Google Cloud environments)
-- Base64 encoded credentials (for containerized environments)
+- OAuth 2.0 (required for all authentication)
 
 ## Quick Start
 
@@ -31,16 +28,10 @@ A Model Context Protocol (MCP) server that provides seamless integration with Go
    npm run test:setup
    ```
 
-3. **Set up authentication** (choose one method):
+3. **Set up OAuth authentication**:
    ```bash
-   # Option 1: Service Account (recommended)
-   export SERVICE_ACCOUNT_PATH="/path/to/service-account.json"
-   
-   # Option 2: OAuth 2.0 (interactive)
+   # Set up OAuth 2.0 (required)
    npm run oauth:setup
-   
-   # Option 3: Use gcloud CLI
-   gcloud auth application-default login
    ```
 
 4. **Test with the inspector:**
@@ -53,6 +44,47 @@ A Model Context Protocol (MCP) server that provides seamless integration with Go
    ```bash
    npm start
    ```
+
+## MCP Client Configuration
+
+### Claude Desktop
+Use the provided configuration file:
+```json
+{
+  "mcpServers": {
+    "google-sheets": {
+      "command": "node",
+      "args": ["src/index.js"],
+      "env": {
+        "CREDENTIALS_PATH": "./google-oauth-key.json",
+        "TOKEN_PATH": "./token.json",
+        "NODE_ENV": "production"
+      },
+      "cwd": "/Users/louie/Projects/mcp/google-sheets-mcp"
+    }
+  }
+}
+```
+
+### VS Code
+Add to your `settings.json`:
+```json
+{
+  "mcp.servers": {
+    "google-sheets": {
+      "command": "node",
+      "args": ["src/index.js"],
+      "env": {
+        "CREDENTIALS_PATH": "./google-oauth-key.json",
+        "TOKEN_PATH": "./token.json"
+      },
+      "cwd": "/Users/louie/Projects/mcp/google-sheets-mcp"
+    }
+  }
+}
+```
+
+See `mcp-config-examples.md` for more detailed configuration options.
 
 ## Installation
 
@@ -67,28 +99,9 @@ npm install
 
 ## Authentication Setup
 
-The server supports multiple authentication methods. Choose the one that best fits your use case:
+The server uses OAuth 2.0 authentication for all operations. This provides secure, user-controlled access to Google Sheets.
 
-### Method 1: Service Account (Recommended)
-
-1. **Create a Service Account**:
-   - Go to [Google Cloud Console](https://console.cloud.google.com/)
-   - Create or select a project
-   - Enable the Google Sheets API and Google Drive API
-   - Go to "Credentials" → "Create Credentials" → "Service Account"
-   - Download the JSON key file
-
-2. **Set Environment Variables**:
-   ```bash
-   export SERVICE_ACCOUNT_PATH="/path/to/your/service-account-key.json"
-   export DRIVE_FOLDER_ID="your_google_drive_folder_id_here"  # Optional
-   ```
-
-3. **Share Access**:
-   - Share your Google Sheets or Drive folder with the service account email
-   - Grant appropriate permissions (Viewer, Editor, etc.)
-
-### Method 2: OAuth 2.0 (Interactive)
+### OAuth 2.0 Setup
 
 **Easy Setup with Automated Flow:**
 
@@ -96,7 +109,7 @@ The server supports multiple authentication methods. Choose the one that best fi
    - Go to [Google Cloud Console](https://console.cloud.google.com/)
    - Go to "Credentials" → "Create Credentials" → "OAuth 2.0 Client IDs"
    - Choose "Web application"
-   - Add `http://localhost:3000/oauth2callback` to redirect URIs
+   - Add `http://localhost:3000/oauth2callback` to redirect URIs (the app will automatically find an available port if 3000 is in use)
    - Download the credentials JSON file and save as `credentials.json`
 
 2. **Run the OAuth Setup**:
@@ -115,34 +128,42 @@ The server supports multiple authentication methods. Choose the one that best fi
    npm run oauth:test
    ```
 
+**Automatic OAuth Startup:**
+
+The application supports automatic OAuth authentication on startup. When you start the server and OAuth is configured but no valid token exists, it will automatically:
+
+1. **Check OAuth Configuration**: Verify credentials and token paths
+2. **Validate Token Status**: Check if existing tokens are valid
+3. **Initiate OAuth Flow**: If needed, start the authorization process
+4. **Handle Browser Authorization**: Open browser for user consent
+5. **Save Tokens**: Store the obtained tokens securely
+6. **Continue Startup**: Proceed with MCP server initialization
+
+To enable automatic OAuth startup:
+
+```bash
+# Set environment variables
+export CREDENTIALS_PATH="/path/to/credentials.json"
+export TOKEN_PATH="/path/to/token.json"
+
+# Start the server (will trigger OAuth if needed)
+npm start
+```
+
+You can also test the OAuth startup functionality independently:
+
+```bash
+# Test OAuth startup
+npm run oauth:startup
+
+# Test OAuth startup functionality
+npm run test:oauth-startup
+```
+
 **Manual Setup (Alternative):**
 ```bash
 export CREDENTIALS_PATH="/path/to/credentials.json"
 export TOKEN_PATH="/path/to/token.json"
-```
-
-### Method 3: Application Default Credentials
-
-1. **Install Google Cloud SDK** and run:
-   ```bash
-   gcloud auth application-default login
-   ```
-
-2. **Or set the environment variable**:
-   ```bash
-   export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account.json"
-   ```
-
-### Method 4: Base64 Encoded Credentials
-
-For containerized environments:
-```bash
-# Encode your credentials file
-base64 -w 0 /path/to/your/credentials.json
-
-# Set the environment variable
-export CREDENTIALS_CONFIG="paste_your_base64_encoded_credentials_here"
-export DRIVE_FOLDER_ID="your_drive_folder_id_here"  # For service accounts
 ```
 
 ## Usage
@@ -191,23 +212,6 @@ npm run inspector:direct
 
 Add this to your Claude Desktop configuration file:
 
-**For Service Account:**
-```json
-{
-  "mcpServers": {
-    "google-sheets": {
-      "command": "node",
-      "args": ["/path/to/google-sheets-mcp/src/index.js"],
-      "env": {
-        "SERVICE_ACCOUNT_PATH": "/path/to/service-account.json",
-        "DRIVE_FOLDER_ID": "your_folder_id_here"
-      }
-    }
-  }
-}
-```
-
-**For OAuth 2.0:**
 ```json
 {
   "mcpServers": {
@@ -216,7 +220,8 @@ Add this to your Claude Desktop configuration file:
       "args": ["/path/to/google-sheets-mcp/src/index.js"],
       "env": {
         "CREDENTIALS_PATH": "/path/to/credentials.json",
-        "TOKEN_PATH": "/path/to/token.json"
+        "TOKEN_PATH": "/path/to/token.json",
+        "DRIVE_FOLDER_ID": "your_folder_id_here"
       }
     }
   }
@@ -276,21 +281,28 @@ Create a new sheet in a spreadsheet.
 ### Data Operations
 
 #### `get_sheet_data`
-Read data from a sheet or range.
+Read data from a sheet or range. If no sheet_name is provided, defaults to 'Sheet1'.
 ```json
 {
   "spreadsheet_id": "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms",
-  "sheet_name": "Sheet1",
-  "range": "A1:C10"  // Optional
+  "sheet_name": "Sheet1",  // Optional, defaults to "Sheet1"
+  "range": "A1:C10"        // Optional, reads entire sheet if not provided
+}
+```
+
+**Simplified usage** (using defaults):
+```json
+{
+  "spreadsheet_id": "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
 }
 ```
 
 #### `update_cells`
-Update cells in a specific range.
+Update cells in a specific range. If no sheet_name is provided, defaults to 'Sheet1'.
 ```json
 {
   "spreadsheet_id": "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms",
-  "sheet_name": "Sheet1",
+  "sheet_name": "Sheet1",  // Optional, defaults to "Sheet1"
   "range": "A1:B2",
   "values": [
     ["Header 1", "Header 2"],
@@ -300,11 +312,11 @@ Update cells in a specific range.
 ```
 
 #### `append_rows`
-Append new rows to the end of a sheet.
+Append new rows to the end of a sheet. If no sheet_name is provided, defaults to 'Sheet1'.
 ```json
 {
   "spreadsheet_id": "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms",
-  "sheet_name": "Sheet1",
+  "sheet_name": "Sheet1",  // Optional, defaults to "Sheet1"
   "values": [
     ["New Row 1", "Data 1"],
     ["New Row 2", "Data 2"]
@@ -356,11 +368,11 @@ Share a spreadsheet with users.
 ### Utilities
 
 #### `clear_range`
-Clear values in a range while preserving formatting.
+Clear values in a range while preserving formatting. If no sheet_name is provided, defaults to 'Sheet1'.
 ```json
 {
   "spreadsheet_id": "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms",
-  "sheet_name": "Sheet1",
+  "sheet_name": "Sheet1",  // Optional, defaults to "Sheet1"
   "range": "A1:C10"
 }
 ```
@@ -450,6 +462,22 @@ This will verify:
 - Authentication methods are configured
 - Credential files exist
 - Server can start properly
+- **Google Sheets API permissions** (new!)
+- **Service account validation** (new!)
+
+#### Service Account Permission Tests
+```bash
+npm run test:service-account
+```
+
+This comprehensive test suite validates:
+- Service account file format and validity
+- Authentication and token generation
+- Google Sheets API access and permissions
+- Google Drive API access and permissions
+- API quota handling
+
+> 📖 **See [PERMISSION_TESTS.md](PERMISSION_TESTS.md) for detailed documentation on permission testing.**
 
 #### Running Tests
 ```bash
@@ -467,11 +495,8 @@ npm test
 
 | Variable | Purpose | Required |
 |----------|---------|----------|
-| `SERVICE_ACCOUNT_PATH` | Path to service account JSON file | For service account auth |
-| `CREDENTIALS_CONFIG` | Base64 encoded credentials | Alternative to file path |
-| `GOOGLE_APPLICATION_CREDENTIALS` | Google's standard ADC variable | For ADC auth |
-| `CREDENTIALS_PATH` | OAuth 2.0 credentials file path | For OAuth auth |
-| `TOKEN_PATH` | OAuth 2.0 token storage path | For OAuth auth |
+| `CREDENTIALS_PATH` | OAuth 2.0 credentials file path | Required |
+| `TOKEN_PATH` | OAuth 2.0 token storage path | Required |
 | `DRIVE_FOLDER_ID` | Default folder for operations | Optional |
 
 ## Troubleshooting

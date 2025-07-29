@@ -7,6 +7,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import dotenv from 'dotenv';
+import { createServer as createNetServer } from 'net';
 
 dotenv.config();
 
@@ -23,8 +24,41 @@ const SCOPES = [
   'https://www.googleapis.com/auth/drive.file',
 ];
 
-const REDIRECT_URI = 'http://localhost:3000/oauth2callback';
-const PORT = 3000;
+// Default port, will be updated to first available port
+const DEFAULT_PORT = 3000;
+
+/**
+ * Find an available port starting from the given port
+ * @param {number} startPort - The port to start checking from
+ * @returns {Promise<number>} - The first available port
+ */
+async function findAvailablePort(startPort = DEFAULT_PORT) {
+  const maxPort = startPort + 5; // Check up to 5 ports
+  
+  for (let port = startPort; port <= maxPort; port++) {
+    try {
+      await new Promise((resolve, reject) => {
+        const server = createNetServer();
+        
+        server.listen(port, () => {
+          server.close();
+          resolve();
+        });
+        
+        server.on('error', () => {
+          reject();
+        });
+      });
+      
+      return port;
+    } catch (error) {
+      // Port is in use, try next one
+      continue;
+    }
+  }
+  
+  throw new Error(`No available ports found between ${startPort} and ${maxPort}`);
+}
 
 class OAuthStartup {
   constructor() {
@@ -32,6 +66,8 @@ class OAuthStartup {
     this.server = null;
     this.resolveAuth = null;
     this.rejectAuth = null;
+    this.port = null;
+    this.redirectUri = null;
   }
 
   /**
@@ -56,11 +92,15 @@ class OAuthStartup {
         return { needsOAuth: false, error: 'Credentials file not found' };
       }
 
-      // Initialize OAuth2 client
+      // Find available port for OAuth callback
+      this.port = await findAvailablePort();
+      this.redirectUri = `http://localhost:${this.port}/oauth2callback`;
+
+      // Initialize OAuth2 client with dynamic redirect URI
       this.oauth2Client = new google.auth.OAuth2(
         credentials.web.client_id,
         credentials.web.client_secret,
-        REDIRECT_URI
+        this.redirectUri
       );
 
       // Check if token exists and is valid
@@ -105,15 +145,15 @@ class OAuthStartup {
 
       console.error('🔐 OAuth authentication required');
       console.error('🌐 Opening browser for Google authorization...');
-      console.error('📡 Starting local server to handle OAuth callback...');
+      console.error(`📡 Starting local server to handle OAuth callback on port ${this.port}...`);
 
       // Start local server to handle callback
       this.server = createServer(async (req, res) => {
         await this.handleCallback(req, res);
       });
 
-      this.server.listen(PORT, () => {
-        console.error(`📡 OAuth server listening on http://localhost:${PORT}`);
+      this.server.listen(this.port, () => {
+        console.error(`📡 OAuth server listening on http://localhost:${this.port}`);
         
         // Open browser
         import('child_process').then(({ exec }) => {
@@ -133,7 +173,7 @@ class OAuthStartup {
    */
   async handleCallback(req, res) {
     try {
-      const url = new URL(req.url, `http://localhost:${PORT}`);
+      const url = new URL(req.url, `http://localhost:${this.port}`);
       const code = url.searchParams.get('code');
       const error = url.searchParams.get('error');
 

@@ -109,7 +109,7 @@ The server uses OAuth 2.0 authentication for all operations. This provides secur
    - Go to [Google Cloud Console](https://console.cloud.google.com/)
    - Go to "Credentials" → "Create Credentials" → "OAuth 2.0 Client IDs"
    - Choose "Web application"
-   - Add `http://localhost:3000/oauth2callback` to redirect URIs
+   - Add `http://localhost:3000/oauth2callback` to redirect URIs (the app will automatically find an available port if 3000 is in use)
    - Download the credentials JSON file and save as `credentials.json`
 
 2. **Run the OAuth Setup**:

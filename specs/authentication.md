@@ -66,7 +66,7 @@ const oauth2Client = new google.auth.OAuth2(
 6. **Startup Authentication**: Automatic OAuth initiation on application startup
 
 #### Security Requirements
-- **Redirect URI**: `http://localhost:3000/oauth2callback`
+- **Redirect URI**: `http://localhost:{port}/oauth2callback` (dynamically assigned, starting from port 3000)
 - **Token Storage**: Secure file storage (600 permissions)
 - **HTTPS**: Required for production redirect URIs
 - **Token Refresh**: Automatic refresh before expiration
@@ -246,7 +246,7 @@ The server now includes fallback path resolution to handle different execution e
 
 #### "Invalid redirect URI"
 **Solution**: 
-- Check that `http://localhost:3000/oauth2callback` is added to your OAuth client
+- Check that `http://localhost:3000/oauth2callback` is added to your OAuth client (the app will automatically find an available port if 3000 is in use)
 - Make sure there are no extra spaces or characters
 
 #### "Access denied" or "Permission denied"
@@ -266,8 +266,8 @@ The server now includes fallback path resolution to handle different execution e
 
 #### "Port 3000 is already in use"
 **Solution**:
-- Close any other applications using port 3000
-- Or modify the port in `src/oauth-setup.js` (line 20)
+- The application now automatically finds an available port starting from 3000
+- If you need to use a specific port range, you can modify the `findAvailablePort` function in `src/oauth-startup.js`
 
 #### "Token file not found" (Claude Desktop)
 **Solution**:
@@ -336,7 +336,7 @@ node debug-token-access.js
 3. Choose **Web application**
 4. Fill in the details:
    - **Name**: `Google Sheets MCP Server`
-   - **Authorized redirect URIs**: `http://localhost:3000/oauth2callback`
+   - **Authorized redirect URIs**: `http://localhost:3000/oauth2callback` (the app will automatically find an available port if 3000 is in use)
 5. Click **Create**
 6. Download the JSON file and save it as `credentials.json` in your project root
 
@@ -398,7 +398,7 @@ npm run inspector
 ##### Configure the OAuth Client
 1. **Application type**: Web application
 2. **Name**: Google Sheets MCP Server
-3. **Authorized redirect URIs**: `http://localhost:3000/oauth2callback`
+3. **Authorized redirect URIs**: `http://localhost:3000/oauth2callback` (you can also add additional ports like `http://localhost:3001/oauth2callback`, `http://localhost:3002/oauth2callback` for flexibility)
 4. Click **Create**
 5. Download the JSON file
 

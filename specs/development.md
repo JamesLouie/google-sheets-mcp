@@ -63,6 +63,7 @@ export SERVICE_ACCOUNT_PATH="/path/to/service-account.json"
 #### 5. Verify Setup
 ```bash
 npm run test:setup
+npm run test:port-finding
 ```
 
 ## 📝 Coding Standards
